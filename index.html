@@ -1624,12 +1624,11 @@ async function saveEdit() {
 // ══════════════════════════════════════════════════════════════
 function getCarAmortStats() {
   const now = new Date();
-  const firstPayment = new Date('2026-01-26');
 
   // Count how many payment dates (26th of each month) have passed
-  // starting from Jan 26, 2026
+  // starting from Jan 26, 2025
   let paid = 0;
-  let paymentDate = new Date(firstPayment);
+  let paymentDate = new Date(CAR_AMORT_START); // Jan 26, 2025
 
   while (paymentDate <= now && paid < CAR_AMORT_TOTAL_MONTHS) {
     paid++;
@@ -1637,14 +1636,13 @@ function getCarAmortStats() {
   }
 
   const remaining = CAR_AMORT_TOTAL_MONTHS - paid;
-  const paidAmount = paid * CAR_AMORT_MONTHLY;
   const remainingAmount = remaining * CAR_AMORT_MONTHLY;
 
   // Next payment date
-  const nextPayment = new Date(firstPayment);
+  const nextPayment = new Date(CAR_AMORT_START);
   nextPayment.setMonth(nextPayment.getMonth() + paid);
 
-  return { paid, remaining, paidAmount, remainingAmount, nextPayment, total: CAR_AMORT_TOTAL_MONTHS };
+  return { paid, remaining, remainingAmount, nextPayment, total: CAR_AMORT_TOTAL_MONTHS };
 }
 
 function renderMonthly() {
