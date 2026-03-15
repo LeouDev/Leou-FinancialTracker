@@ -606,11 +606,7 @@ window.ENV_PIN_HASH = 'd4cf70ff4b70d74f47fdd86bb01f4285712b60888fa65b0d0d6879507
       <button class="pin-btn del" id="pinDelBtn">⌫</button>
     </div>
     <div class="lock-error" id="pinError"></div>
-    <div style="margin-top:20px;">
-      <button id="skipPinBtn" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-family:'Syne',sans-serif;padding:10px 24px;border-radius:9px;width:100%;font-weight:700;position:relative;z-index:10001;touch-action:manipulation;">
-        🚪 Skip PIN & Enter
-      </button>
-    </div>
+
   </div>
 </div>
 
@@ -1035,12 +1031,7 @@ document.addEventListener('DOMContentLoaded', function() {
     delBtn.addEventListener('touchend', function(e) { e.preventDefault(); pinDelete(); });
   }
 
-  // Skip button
-  const skipBtn = document.getElementById('skipPinBtn');
-  if (skipBtn) {
-    skipBtn.addEventListener('click', function(e) { e.preventDefault(); unlockApp(); });
-    skipBtn.addEventListener('touchend', function(e) { e.preventDefault(); unlockApp(); });
-  }
+
 });
 
 // Keyboard support
