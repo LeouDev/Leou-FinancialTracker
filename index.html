@@ -1152,17 +1152,28 @@ async function loadFromSupabase() {
       transactions = txRes.data.map(t => ({ ...t, desc: t.description || t.desc || '' }));
       nextId = Math.max(...transactions.map(t => t.id), 0) + 1;
     } else {
-      // First time: seed with default data
-      transactions = [...defaultTx];
-      nextId = 30;
-      await seedSupabase();
+      // Table is empty — check the seeded flag stored in Supabase budget row
+      const alreadySeeded = budgetRes.data && budgetRes.data.seeded === true;
+      if (!alreadySeeded) {
+        // Truly first time setup: seed default data once
+        transactions = [...defaultTx];
+        nextId = 30;
+        await seedSupabase();
+        // Mark as seeded in Supabase so ANY device knows not to re-seed
+        await supabaseClient.from('budget').upsert({ id: 1, seeded: true });
+      } else {
+        // User deleted all transactions intentionally: keep empty
+        transactions = [];
+        nextId = 1;
+      }
     }
 
     if (budgetRes.data) {
       budget = {
         netSalary: budgetRes.data.net_salary,
         expenses: budgetRes.data.expenses,
-        nextExpId: budgetRes.data.next_exp_id
+        nextExpId: budgetRes.data.next_exp_id,
+        seeded: budgetRes.data.seeded
       };
     }
   } catch(err) {
