@@ -717,7 +717,9 @@ function renderUserAvatar(user){
   }
   document.getElementById('dropdownName').textContent=name;
   document.getElementById('dropdownEmail').textContent=user.email;
-  document.getElementById('appTitle').textContent=name.split(' ')[0]+"'s Finance";
+  const firstName=name.split(' ')[0];
+  document.getElementById('appTitle').textContent=firstName+"'s Finance";
+  document.title='💳 '+firstName+"'s Finance";
 }
 
 // ══════════════════════════════════════════════════════════════
