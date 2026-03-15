@@ -453,6 +453,7 @@ tr.selected td{background:rgba(91,140,255,0.07)!important;}
         </div>
       </div>
       <button class="btn btn-primary" onclick="addTransaction()" style="width:100%;padding:13px;font-size:15px;">➕ Add Transaction</button>
+      <button class="btn" onclick="openCreditModal()" style="width:100%;padding:12px;font-size:14px;margin-top:10px;background:rgba(255,209,102,0.1);border:1px solid rgba(255,209,102,0.35);color:var(--accent4);font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,209,102,0.18)'" onmouseout="this.style.background='rgba(255,209,102,0.1)'">🏷️ Log a Credit (Cashback / Refund)</button>
     </div>
 
     <!-- BULK UPLOAD -->
@@ -572,6 +573,53 @@ tr.selected td{background:rgba(91,140,255,0.07)!important;}
   </div>
 </div>
 
+<!-- ── CREDIT MODAL ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="creditModal">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">🏷️ Log a Credit</div>
+      <button class="modal-close" onclick="closeModal('creditModal')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+      Credits reduce your <strong style="color:var(--accent4)">Net Balance</strong>. Use this for cashback, refunds, GCash rebates, or any amount that offsets what you owe.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" id="cr_date">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Description</label>
+        <input class="form-input" type="text" id="cr_desc" placeholder="e.g. BPI Cashback, GCash Rebate, Refund">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Credit Amount (₱)</label>
+        <input class="form-input" type="number" id="cr_amount" placeholder="0.00" step="0.01" inputmode="decimal">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Source / CC</label>
+        <input class="form-input" type="text" id="cr_cc" placeholder="e.g. BPI, GCash, Maya" list="cr_cc_list" autocomplete="off">
+        <datalist id="cr_cc_list"></datalist>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Category</label>
+        <input class="form-input" type="text" id="cr_cat" placeholder="e.g. Cashback, Refund" list="cr_cat_list">
+        <datalist id="cr_cat_list">
+          <option value="Cashback">
+          <option value="Refund">
+          <option value="Rebate">
+          <option value="Adjustment">
+          <option value="Overpayment">
+        </datalist>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-primary" onclick="saveCredit()" style="flex:1;padding:12px;font-size:14px;">💾 Save Credit</button>
+      <button class="btn" onclick="closeModal('creditModal')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:12px 16px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 // SUPABASE INIT
@@ -650,7 +698,7 @@ function closeModal(id){
 }
 
 document.addEventListener('click',function(e){
-  ['editModal','salaryModal','budgetModal'].forEach(id=>{
+  ['editModal','salaryModal','budgetModal','creditModal'].forEach(id=>{
     const m=document.getElementById(id);
     if(e.target===m)closeModal(id);
   });
@@ -1066,7 +1114,7 @@ function renderOverviewKpis(){
     <div class="kpi blue"><div class="kpi-label">Total Owed</div><div class="kpi-value">${fmt(totalOwed)}</div><div class="kpi-sub">${unpaidCount} unpaid · ${label}</div></div>
     <div class="kpi pink"><div class="kpi-label">Total Spending</div><div class="kpi-value">${fmt(totalSpent)}</div><div class="kpi-sub">${label}</div></div>
     <div class="kpi green"><div class="kpi-label">Total Paid</div><div class="kpi-value">${fmt(totalPaid)}</div><div class="kpi-sub">${label}</div></div>
-    <div class="kpi yellow"><div class="kpi-label">Credits</div><div class="kpi-value">${fmt(credits)}</div><div class="kpi-sub">${label}</div></div>
+    <div class="kpi yellow" style="cursor:pointer;" onclick="openCreditModal()" title="Click to log a credit"><div class="kpi-label">Credits ➕</div><div class="kpi-value">${fmt(credits)}</div><div class="kpi-sub">${label} · tap to add</div></div>
     <div class="kpi red"><div class="kpi-label">Net Balance</div><div class="kpi-value">${fmt(totalOwed-credits)}</div><div class="kpi-sub">After credits</div></div>
   `;
 }
@@ -1122,14 +1170,19 @@ function renderTable(){
     if(search&&!t.desc.toLowerCase().includes(search)&&!t.cto.toLowerCase().includes(search))return false;
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('txTable').innerHTML=filtered.map((t,i)=>`
-    <tr id="row-${t.id}" class="${selectedIds.has(t.id)?'selected':''}">
+  document.getElementById('txTable').innerHTML=filtered.map((t,i)=>{
+    const isCredit=t.amount<0;
+    const displayDesc=isCredit?t.desc.replace('[CREDIT] ',''):t.desc;
+    return `
+    <tr id="row-${t.id}" class="${selectedIds.has(t.id)?'selected':''}" style="${isCredit?'background:rgba(67,232,160,0.04);':''}">
       <td><input type="checkbox" class="row-cb" data-id="${t.id}" ${selectedIds.has(t.id)?'checked':''}></td>
       <td style="color:var(--muted)">${i+1}</td>
       <td>${t.date}</td>
-      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.desc}</td>
-      <td class="${t.amount<0?'amount-negative':''}" style="${t.amount<0?'':'color:var(--accent2)'}">
-        ${t.amount<0?'-':''}${fmt(t.amount)}</td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        ${isCredit?`<span style="background:rgba(67,232,160,0.15);color:#43e8a0;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;margin-right:5px;letter-spacing:0.5px;">CREDIT</span>`:''}${displayDesc}
+      </td>
+      <td class="${isCredit?'':''}\" style="${isCredit?'color:#43e8a0;font-weight:700;':'color:var(--accent2)'}">
+        ${isCredit?'−':''}${fmt(t.amount)}</td>
       <td style="color:var(--text);font-family:'Syne'">${t.cto}</td>
       <td><span style="background:rgba(91,140,255,0.1);color:#5b8cff;padding:2px 7px;border-radius:5px;font-size:10px;font-family:'Syne'">${t.cat}</span></td>
       <td style="color:var(--muted)">${t.cc}</td>
@@ -1142,8 +1195,8 @@ function renderTable(){
           <button class="btn btn-danger btn-sm" onclick="deleteTx(${t.id})">🗑</button>
         </div>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
   document.querySelectorAll('.row-cb').forEach(cb=>{
     cb.addEventListener('change',function(){
       const id=parseInt(this.getAttribute('data-id'));
@@ -1200,6 +1253,50 @@ async function addTransaction(){
   document.getElementById('f_desc').value='';document.getElementById('f_amount').value='';
   document.getElementById('f_cto').value='';document.getElementById('f_cat').value='';
   showToast('✅ Transaction added!');renderOverview();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CREDITS
+// ══════════════════════════════════════════════════════════════
+function openCreditModal(){
+  // Pre-fill today's date
+  document.getElementById('cr_date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cr_desc').value='';
+  document.getElementById('cr_amount').value='';
+  document.getElementById('cr_cc').value='';
+  document.getElementById('cr_cat').value='';
+  // Populate CC list from existing transactions
+  document.getElementById('cr_cc_list').innerHTML=unique(transactions,'cc').map(v=>`<option value="${v}">`).join('');
+  openModal('creditModal');
+}
+
+async function saveCredit(){
+  const date=document.getElementById('cr_date').value;
+  const desc=document.getElementById('cr_desc').value.trim();
+  const amount=parseFloat(document.getElementById('cr_amount').value);
+  const cc=document.getElementById('cr_cc').value.trim()||'Credit';
+  const cat=document.getElementById('cr_cat').value.trim()||'Credit';
+  if(!date||!desc||isNaN(amount)||amount<=0){showToast('⚠️ Please fill all fields with a valid amount!');return;}
+  // Store credits as negative amounts — same logic the KPI already uses
+  const tx={
+    id:nextId++,
+    date,
+    post_date:date,
+    desc:'[CREDIT] '+desc,
+    amount:-Math.abs(amount),
+    cto:'—',
+    cat,
+    due:date,
+    status:'Paid',
+    cc
+  };
+  transactions.push(tx);
+  await saveTransactionToSupabase(tx);
+  populateDataLists();
+  closeModal('creditModal');
+  showToast('✅ Credit logged! Net Balance updated.');
+  renderOverview();
+  renderTable();
 }
 
 // ══════════════════════════════════════════════════════════════
