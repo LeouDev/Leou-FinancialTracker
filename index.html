@@ -920,7 +920,7 @@ async function loadData(){
 async function saveTransactionToSupabase(tx){
   try{
     const row={id:tx.id,user_id:currentUser.id,date:tx.date,post_date:tx.date,description:tx.desc,amount:tx.amount,cto:tx.cto,cat:tx.cat,due:tx.due,status:tx.status,cc:tx.cc};
-    const{error}=await sb.from('transactions').upsert(row);
+    const{error}=await sb.from('transactions').upsert(row,{onConflict:'id'});
     if(error)throw error;
   }catch(e){
     console.error('Save TX error:',e);showToast('⚠️ Sync error');
